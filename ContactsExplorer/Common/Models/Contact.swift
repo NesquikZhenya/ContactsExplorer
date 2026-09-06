@@ -10,9 +10,9 @@ import Foundation
 
 nonisolated struct Contact: Identifiable, Hashable {
     struct LabeledValue: Identifiable, Hashable {
-        let id = UUID()
         let label: String
         let value: String
+        var id: String { "\(label)|\(value)" }
     }
 
     let id: String
@@ -22,21 +22,17 @@ nonisolated struct Contact: Identifiable, Hashable {
     let organizationName: String
     let phoneNumbers: [LabeledValue]
     let emails: [LabeledValue]
-    let birthday: Date?
+    let birthday: DateComponents?
     let thumbnailData: Data?
 
     var displayName: String {
-        // let name = "\(givenName) \(familyName)".trimmingCharacters(in: .whitespaces)
-        // if !name.isEmpty {
-        //     return name
-        // }
         if !fullName.isEmpty {
             return fullName
         }
         if !organizationName.isEmpty {
             return organizationName
         }
-        return phoneNumbers.first?.value ?? emails.first?.value ?? "No Name"
+        return phoneNumbers.first?.value ?? emails.first?.value ?? Strings.noName
     }
 
     var initials: String {
@@ -60,17 +56,36 @@ nonisolated extension Contact {
         organizationName = cnContact.organizationName
         phoneNumbers = cnContact.phoneNumbers.map { phoneNumber in
             LabeledValue(
-                label: phoneNumber.label.map { CNLabeledValue<CNPhoneNumber>.localizedString(forLabel: $0) } ?? "phone",
+                label: phoneNumber.label.map { CNLabeledValue<CNPhoneNumber>.localizedString(forLabel: $0) } ?? Strings.phone,
                 value: phoneNumber.value.stringValue
             )
         }
         emails = cnContact.emailAddresses.map { email in
             LabeledValue(
-                label: email.label.map { CNLabeledValue<NSString>.localizedString(forLabel: $0) } ?? "email",
+                label: email.label.map { CNLabeledValue<NSString>.localizedString(forLabel: $0) } ?? Strings.email,
                 value: email.value as String
             )
         }
-        birthday = cnContact.birthday.flatMap { Calendar.current.date(from: $0) }
+        birthday = cnContact.birthday
         thumbnailData = cnContact.thumbnailImageData
+    }
+}
+
+// MARK: - Constants
+
+private nonisolated extension Contact {
+    enum Strings {
+        static let noName = String(
+            localized: "No Name",
+            comment: "Stands in for a contact with no name, organization, phone number or email"
+        )
+        static let phone = String(
+            localized: "phone",
+            comment: "Default label for a phone number the address book left unlabeled"
+        )
+        static let email = String(
+            localized: "email",
+            comment: "Default label for an email address the address book left unlabeled"
+        )
     }
 }
